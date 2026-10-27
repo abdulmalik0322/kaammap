@@ -1,0 +1,27 @@
+KAAMMAP - DEPLOYMENT-READY UPDATE (GitHub + Vercel)
+====================================================
+
+WHAT IS NEW
+- api/index.js + vercel.json: website and API now deploy as ONE
+  Vercel project on ONE domain (login cookie works properly).
+- docs/DEPLOYMENT.md: full GitHub -> Vercel guide.
+- All tests passed before this update (53/53 backend, 30/30
+  browser checks, real register/login/OTP reset flows).
+
+UPDATE YOUR FOLDER
+1. Close both terminals.
+2. Extract this zip INTO your kaammap-complete folder, Replace.
+   (.env files and node_modules are not in the zip - they stay.)
+
+PUSH TO GITHUB (in the kaammap-complete folder terminal):
+   git init
+   git add .
+   git status        <- check: .env and node_modules NOT listed
+   git commit -m "KAAMMAP full-stack platform"
+   git branch -M main
+   git remote add origin https://github.com/abdulmalik0322/kaammap.git
+   (if it says "remote origin already exists", ignore - you
+    already added it)
+   git push -u origin main
+
+Then tell Muse "push ho gaya" - Vercel deployment is next.

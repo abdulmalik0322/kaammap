@@ -1,0 +1,18 @@
+export class ApiError extends Error {
+  constructor(status, code, message, details = undefined) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.isApiError = true;
+  }
+}
+
+export const badRequest = (message = 'Please check the submitted information', code = 'VALIDATION_ERROR', details) =>
+  new ApiError(400, code, message, details);
+export const unauthorized = (message = 'Authentication required', code = 'UNAUTHORIZED') =>
+  new ApiError(401, code, message);
+export const forbidden = (message = 'You do not have permission to perform this action', code = 'FORBIDDEN') =>
+  new ApiError(403, code, message);
+export const notFound = (message = 'Resource not found', code = 'NOT_FOUND') => new ApiError(404, code, message);
+export const conflict = (message = 'Resource already exists', code = 'CONFLICT') => new ApiError(409, code, message);

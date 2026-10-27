@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+dist/
+server/dist/
+
+# Environment & secrets — never commit real credentials
+.env
+server/.env
+.env.*
+!/.env.example
+!server/.env.example
+
+# Logs
+*.log
+logs/
+
+# Test / tooling caches
+server/node_modules/.cache/
+coverage/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,25 @@
+import {Suspense,lazy} from "react"
+import {HashRouter,Routes,Route,Navigate,useLocation} from "react-router-dom"
+import {AppProvider,useApp} from "./context/AppContext"
+import {Navbar,Footer,Toasts,ScrollTop,PageWrap} from "./components/layout"
+const Home=lazy(()=>import("./pages/Home")); const Explore=lazy(()=>import("./pages/Explore")); const GuideDetails=lazy(()=>import("./pages/GuideDetails")); const Finder=lazy(()=>import("./pages/Finder"))
+const Cats=lazy(()=>import("./pages/Categories").then(m=>({default:m.Categories}))); const CatDetail=lazy(()=>import("./pages/Categories").then(m=>({default:m.CategoryDetails})))
+const About=lazy(()=>import("./pages/Misc").then(m=>({default:m.About}))); const How=lazy(()=>import("./pages/Misc").then(m=>({default:m.HowItWorks}))); const Contact=lazy(()=>import("./pages/Misc").then(m=>({default:m.Contact}))); const ReportIssue=lazy(()=>import("./pages/Misc").then(m=>({default:m.ReportIssue}))); const Privacy=lazy(()=>import("./pages/Misc").then(m=>({default:m.Privacy}))); const Terms=lazy(()=>import("./pages/Misc").then(m=>({default:m.Terms}))); const NotFound=lazy(()=>import("./pages/Misc").then(m=>({default:m.NotFound})))
+const Saved=lazy(()=>import("./pages/SavedDashboard").then(m=>({default:m.Saved})))
+const SignIn=lazy(()=>import("./pages/Auth").then(m=>({default:m.SignIn}))); const SignUp=lazy(()=>import("./pages/Auth").then(m=>({default:m.SignUp}))); const Forgot=lazy(()=>import("./pages/Auth").then(m=>({default:m.Forgot}))); const ResetPw=lazy(()=>import("./pages/Auth").then(m=>({default:m.ResetPassword}))); const VerifyEm=lazy(()=>import("./pages/Auth").then(m=>({default:m.VerifyEmail}))); const Admin=lazy(()=>import("./pages/Admin"))
+const DashLayout=lazy(()=>import("./pages/SavedDashboard").then(m=>({default:m.DashLayout}))); const DashHome=lazy(()=>import("./pages/SavedDashboard").then(m=>({default:m.DashHome}))); const DashSaved=lazy(()=>import("./pages/SavedDashboard").then(m=>({default:m.DashSaved}))); const DashSettings=lazy(()=>import("./pages/SavedDashboard").then(m=>({default:m.DashSettings})))
+
+function ApiBanner(){ const {apiMode,dataError,reloadData,t}=useApp(); if(!apiMode||!dataError) return null; return <div className="bg-[#FFF7ED] dark:bg-[#3A2A1C] border-b border-coral/40 no-print"><div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center gap-3 text-sm"><p className="font-semibold flex-1 min-w-[220px]">{t("api_err",{err:dataError})}</p><button onClick={reloadData} className="bg-forest text-white px-4 py-2 rounded-full font-bold text-[13px]">{t("retry")}</button></div></div> }
+function Protected({children}){ const {user}=useApp(); const loc=useLocation(); if(!user) return <Navigate to="/signin" state={{from:loc.pathname}} replace/>; return children }
+function LegacyRedirect(){ const loc=useLocation(); return <Navigate to="/explore" replace/> }
+function Shell(){ return <div className="min-h-screen flex flex-col bg-ivory text-ink dark:bg-[#12241C] dark:text-[#EEF2EC] font-body"><ScrollTop/><Navbar/><ApiBanner/><div className="flex-1"><Suspense fallback={<div className="max-w-7xl mx-auto px-6 py-16"><div className="h-8 w-56 bg-stone2/70 rounded-full animate-pulse"/><div className="grid sm:grid-cols-3 gap-5 mt-8">{[1,2,3].map(i=><div key={i} className="h-60 bg-white dark:bg-white/5 rounded-3xl animate-pulse"/>)}</div></div>}>
+ <PageWrap><Routes>
+  <Route path="/" element={<Home/>}/><Route path="/explore" element={<Explore/>}/><Route path="/guides/:slug" element={<GuideDetails/>}/><Route path="/finder" element={<Finder/>}/>
+  <Route path="/categories" element={<Cats/>}/><Route path="/categories/:slug" element={<CatDetail/>}/><Route path="/about" element={<About/>}/><Route path="/how-it-works" element={<How/>}/><Route path="/contact" element={<Contact/>}/><Route path="/report-issue" element={<ReportIssue/>}/><Route path="/saved" element={<Saved/>}/>
+  <Route path="/signin" element={<SignIn/>}/><Route path="/signup" element={<SignUp/>}/><Route path="/forgot" element={<Forgot/>}/><Route path="/reset-password" element={<ResetPw/>}/><Route path="/verify-email" element={<VerifyEm/>}/><Route path="/admin" element={<Protected><Admin/></Protected>}/><Route path="/privacy" element={<Privacy/>}/><Route path="/terms" element={<Terms/>}/>
+  <Route path="/dashboard" element={<Protected><DashLayout/></Protected>}><Route index element={<DashHome/>}/><Route path="saved" element={<DashSaved/>}/><Route path="settings" element={<DashSettings/>}/></Route>
+  {/* Old ASALKHARCHA routes retired — send any stale links to the new Explore */}
+  <Route path="/report/*" element={<LegacyRedirect/>}/><Route path="/compare" element={<LegacyRedirect/>}/><Route path="/create" element={<LegacyRedirect/>}/><Route path="/profile" element={<Navigate to="/dashboard/settings" replace/>}/>
+  <Route path="*" element={<NotFound/>}/>
+ </Routes></PageWrap></Suspense></div><Footer/><Toasts/></div> }
+export default function App(){ return <AppProvider><HashRouter><Shell/></HashRouter></AppProvider> }

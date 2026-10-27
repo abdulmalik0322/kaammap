@@ -1,0 +1,763 @@
+openapi: 3.0.3
+info:
+  title: KAAMMAP API
+  version: 1.0.0
+  description: |
+    Backend API for KAAMMAP — an independent information platform that helps
+    people in Pakistan understand documents, official fees and steps for
+    real-life processes. KAAMMAP is NOT a government website.
+
+    Authentication: login/register return a short-lived (15 min) JWT access
+    token in the JSON body and set an HttpOnly refresh cookie (`km_refresh`,
+    path /api/v1/auth). Send the access token as `Authorization: Bearer <token>`.
+    POST /api/v1/auth/refresh rotates the refresh session.
+
+    All responses use the envelope: success `{ success, data, message }`,
+    error `{ success: false, error: { code, message, details? }, requestId }`.
+servers:
+  - url: /api/v1
+    description: Current server, API v1 prefix
+tags:
+  - name: Health
+  - name: Auth
+  - name: Public
+  - name: User
+  - name: Admin
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: km_refresh
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string, example: VALIDATION_ERROR }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  path: { type: string }
+                  message: { type: string }
+        requestId: { type: string }
+    User:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [user, admin] }
+        accountStatus: { type: string, enum: [active, suspended] }
+        emailVerifiedAt: { type: string, format: date-time, nullable: true }
+        preferredLanguage: { type: string }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AuthResponse:
+      type: object
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        accessToken: { type: string, description: 'JWT access token, 15 minute lifetime' }
+        devToken:
+          type: string
+          description: 'DEV ONLY (never in production): one-time verification token or 6-digit reset code (devCode) when email is not configured.'
+    Category:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        icon: { type: string }
+        image: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: boolean }
+    GuideDocument:
+      type: object
+      properties:
+        name: { type: string }
+        desc: { type: string }
+        status: { type: string, enum: [required, conditional] }
+        note: { type: string }
+    GuideFee:
+      type: object
+      properties:
+        name: { type: string }
+        amount: { type: number, nullable: true }
+        applies: { type: string }
+        source: { type: string }
+        checked: { type: string }
+    GuideStep:
+      type: object
+      properties:
+        title: { type: string }
+        desc: { type: string }
+        link:
+          type: object
+          nullable: true
+          description: Optional official link attached to the step (mirrors the frontend data shape)
+          properties:
+            label: { type: string }
+            url: { type: string }
+    Guide:
+      type: object
+      properties:
+        _id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        short: { type: string }
+        categorySlug: { type: string }
+        scope: { type: string }
+        applies: { type: string }
+        authority: { type: string }
+        whoFor: { type: string }
+        level: { type: string, enum: [checked, partial, preparation] }
+        verifiedDate: { type: string }
+        verifyNote: { type: string }
+        keywords: { type: array, items: { type: string } }
+        documents: { type: array, items: { $ref: '#/components/schemas/GuideDocument' } }
+        fees: { type: array, items: { $ref: '#/components/schemas/GuideFee' } }
+        feesUnavailable: { type: string }
+        steps: { type: array, items: { $ref: '#/components/schemas/GuideStep' } }
+        applyAt:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              url: { type: string }
+              desc: { type: string }
+        notes: { type: array, items: { type: string } }
+        faqs:
+          type: array
+          items:
+            type: object
+            properties:
+              q: { type: string }
+              a: { type: string }
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              url: { type: string }
+              desc: { type: string }
+        related: { type: array, items: { type: string } }
+        heroImage: { type: string }
+        publicationStatus: { type: string, enum: [draft, published, archived, needs_review] }
+        publishedAt: { type: string, format: date-time, nullable: true }
+    PaginatedGuides:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Guide' } }
+        page: { type: integer }
+        limit: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+    Source:
+      type: object
+      properties:
+        _id: { type: string }
+        title: { type: string }
+        officialUrl: { type: string, format: uri }
+        organization: { type: string }
+        sourceType:
+          type: string
+          enum: [government-website, application-portal, fee-schedule, official-notification, university-website, other-authoritative]
+        guideSlugs: { type: array, items: { type: string } }
+        checkedAt: { type: string, format: date-time, nullable: true }
+        notes: { type: string }
+    IssueReport:
+      type: object
+      properties:
+        _id: { type: string }
+        guideSlug: { type: string }
+        issueType: { type: string, enum: [outdated-fee, wrong-document, broken-link, wrong-steps, wrong-information, other] }
+        description: { type: string }
+        relevantSection: { type: string }
+        status: { type: string, enum: [pending, reviewing, resolved, rejected] }
+        createdAt: { type: string, format: date-time }
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Service health (no sensitive details)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: ok }
+                      db: { type: string, enum: [connected, disconnected] }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account (role is always "user"; sets refresh cookie)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8, maxLength: 72 }
+                preferredLanguage: { type: string }
+      responses:
+        '201': { description: Account created, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: Email already in use, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in (returns access token + sets refresh cookie)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: Logged in, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '401': { description: Invalid credentials (generic), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out (revokes the refresh session and clears the cookie)
+      security: [{ refreshCookie: [] }]
+      responses:
+        '200': { description: Logged out }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current user, content: { application/json: { schema: { type: object, properties: { user: { $ref: '#/components/schemas/User' } } } } } }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate the refresh session and issue a new access token
+      security: [{ refreshCookie: [] }]
+      responses:
+        '200': { description: New access token, content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } } }
+        '401': { description: Session missing/expired/revoked, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a 6-digit password reset code by email (generic response; never reveals account existence)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email } }
+      responses:
+        '200': { description: Generic acknowledgement (devCode included in dev only, when the account exists) }
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with the 6-digit code (10 min expiry, max 5 attempts, single use; revokes all sessions)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, password]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, pattern: '^\d{6}$', example: '123456' }
+                password: { type: string, minLength: 8, maxLength: 72 }
+      responses:
+        '200': { description: Password reset }
+        '400': { description: Invalid/expired code or attempts exceeded, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      summary: Verify an email address with the verification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties: { token: { type: string } }
+      responses:
+        '200': { description: Email verified }
+        '400': { description: Invalid/expired code or attempts exceeded, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /auth/resend-verification:
+    post:
+      tags: [Auth]
+      summary: Resend the verification email (generic response)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties: { email: { type: string, format: email } }
+      responses:
+        '200': { description: Generic acknowledgement }
+  /categories:
+    get:
+      tags: [Public]
+      summary: List active categories
+      responses:
+        '200': { description: Categories, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/Category' } } } } } } }
+  /categories/{slug}:
+    get:
+      tags: [Public]
+      summary: Get one active category
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Category }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /guides:
+    get:
+      tags: [Public]
+      summary: Search, filter, sort and paginate published guides
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: 'Search title, summary, keywords, authority and category name' }
+        - { name: category, in: query, schema: { type: string }, description: Category slug }
+        - { name: province, in: query, schema: { type: string }, description: 'Matches the guide scope (e.g. Punjab, Nationwide)' }
+        - { name: level, in: query, schema: { type: string, enum: [checked, partial, preparation] } }
+        - { name: sort, in: query, schema: { type: string, enum: [relevant, title, recent], default: relevant } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 12, maximum: 50 } }
+      responses:
+        '200': { description: Paginated guides, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedGuides' } } } }
+  /guides/featured:
+    get:
+      tags: [Public]
+      summary: Featured guides (level=checked, max 6)
+      responses:
+        '200': { description: Featured guides }
+  /guides/{slug}:
+    get:
+      tags: [Public]
+      summary: Get one published guide by slug (drafts are never exposed)
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Guide, content: { application/json: { schema: { type: object, properties: { guide: { $ref: '#/components/schemas/Guide' } } } } } }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /guides/{slug}/related:
+    get:
+      tags: [Public]
+      summary: Related published guides
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Related guides }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /guides/{slug}/report-issue:
+    post:
+      tags: [Public]
+      summary: Report outdated/incorrect information in a guide (public, optional auth, rate limited)
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description]
+              properties:
+                issueType: { type: string, enum: [outdated-fee, wrong-document, broken-link, wrong-steps, wrong-information, other] }
+                description: { type: string, minLength: 5, maxLength: 2000 }
+                relevantSection: { type: string, maxLength: 200 }
+      responses:
+        '201': { description: Report received }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: Guide not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /contact:
+    post:
+      tags: [Public]
+      summary: Send a contact message (rate limited)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, subject, message]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                email: { type: string, format: email }
+                subject: { type: string, minLength: 3, maxLength: 150 }
+                message: { type: string, minLength: 10, maxLength: 5000 }
+      responses:
+        '201': { description: Message received }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /users/me:
+    get:
+      tags: [User]
+      summary: Get own profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Profile }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    patch:
+      tags: [User]
+      summary: Update own profile (allowlist only — name, preferredLanguage; role can never be set here)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                preferredLanguage: { type: string }
+      responses:
+        '200': { description: Updated profile }
+        '400': { description: Unknown/protected field or validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      tags: [User]
+      summary: 'Delete own account (requires { confirm: true }; saved guides/progress/sessions are removed, public reports are anonymized)'
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm]
+              properties: { confirm: { type: boolean, enum: [true] } }
+      responses:
+        '200': { description: Account deleted }
+  /users/me/password:
+    patch:
+      tags: [User]
+      summary: Change password (verifies current password; revokes all sessions)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8, maxLength: 72 }
+      responses:
+        '200': { description: Password changed }
+        '401': { description: Current password incorrect, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /users/me/saved-guides:
+    get:
+      tags: [User]
+      summary: List own saved guides
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved guides }
+  /users/me/saved-guides/{guideId}:
+    post:
+      tags: [User]
+      summary: Save a guide (guideId accepts a slug or ObjectId; idempotent — duplicates return the existing record)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: guideId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Already saved }
+        '201': { description: Saved }
+        '404': { description: Guide not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      tags: [User]
+      summary: Remove a saved guide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: guideId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Removed }
+  /users/me/progress/{guideSlug}:
+    get:
+      tags: [User]
+      summary: Get own checklist progress for a guide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: guideSlug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200':
+          description: Progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  guideSlug: { type: string }
+                  completedItems: { type: array, items: { type: string }, example: ['d0', 's2'] }
+    put:
+      tags: [User]
+      summary: Save checklist progress (item ids d<index>/s<index> are validated against the guide)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: guideSlug, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [completedItems]
+              properties:
+                completedItems: { type: array, items: { type: string, pattern: '^[ds][0-9]+$' } }
+      responses:
+        '200': { description: Progress saved }
+        '400': { description: Invalid/out-of-range item id, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    delete:
+      tags: [User]
+      summary: Reset checklist progress for a guide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: guideSlug, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Progress reset }
+  /users/me/reports:
+    get:
+      tags: [User]
+      summary: List own issue reports (admin notes are never included)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Own reports }
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Real database statistics + recent audit activity
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Dashboard stats }
+        '403': { description: Admin required, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/guides:
+    get:
+      tags: [Admin]
+      summary: List guides in all statuses (paginated; filters — status, category, q)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated guides, content: { application/json: { schema: { $ref: '#/components/schemas/PaginatedGuides' } } } }
+    post:
+      tags: [Admin]
+      summary: Create a guide (starts as draft)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Guide' }
+      responses:
+        '201': { description: Guide created }
+        '400': { description: Validation error / unknown category, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: Duplicate slug, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/guides/{id}:
+    get:
+      tags: [Admin]
+      summary: Get a guide by id (any status)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Guide }
+        '400': { description: Invalid id, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    patch:
+      tags: [Admin]
+      summary: Update a guide (allowlisted fields; slug immutable once published; fee/source changes are audit-logged)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Guide' }
+      responses:
+        '200': { description: Updated guide }
+    delete:
+      tags: [Admin]
+      summary: Delete a guide (drafts only — published/archived guides return 409, archive instead)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Deleted }
+        '409': { description: Not a draft, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/guides/{id}/publish:
+    post:
+      tags: [Admin]
+      summary: Publish a guide (validates required fields; level=checked requires at least one source)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Published }
+        '400': { description: Publish validation failed, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/guides/{id}/archive:
+    post:
+      tags: [Admin]
+      summary: Archive a guide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Archived }
+  /admin/guides/{id}/request-review:
+    post:
+      tags: [Admin]
+      summary: Request review (drafts move to needs_review)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Review requested }
+  /admin/categories:
+    post:
+      tags: [Admin]
+      summary: Create a category
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Category' }
+      responses:
+        '201': { description: Category created }
+        '409': { description: Duplicate slug, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/categories/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update a category
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete a category (409 while guides reference it — deactivate instead)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Deleted }
+        '409': { description: Category in use, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /admin/sources:
+    get:
+      tags: [Admin]
+      summary: List official sources (paginated; filter — guideSlug)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Sources }
+    post:
+      tags: [Admin]
+      summary: Create an official source (URL must be http/https)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Source' }
+      responses:
+        '201': { description: Source created }
+  /admin/sources/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update a source
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Admin]
+      summary: Delete a source
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Deleted }
+  /admin/reports:
+    get:
+      tags: [Admin]
+      summary: List issue reports incl. admin notes (filter — status, guideSlug)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Reports }
+  /admin/reports/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update a report status / admin notes (sets reviewedBy/reviewedAt; audit-logged)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [pending, reviewing, resolved, rejected] }
+                adminNotes: { type: string, maxLength: 2000 }
+      responses:
+        '200': { description: Updated report }
+  /admin/contact-messages:
+    get:
+      tags: [Admin]
+      summary: List contact messages (filter — status)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Messages }
+  /admin/contact-messages/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update a contact message status
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties: { status: { type: string, enum: [new, read, replied, archived] } }
+      responses:
+        '200': { description: Updated }
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users (paginated; filters — role, q on email; password hashes never returned)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Users }
+  /admin/users/{id}:
+    patch:
+      tags: [Admin]
+      summary: Change a user's role or account status (audit-logged; admins cannot change their own role; suspending revokes sessions)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [user, admin] }
+                accountStatus: { type: string, enum: [active, suspended] }
+      responses:
+        '200': { description: Updated user }
+        '400': { description: Self role change / validation, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
