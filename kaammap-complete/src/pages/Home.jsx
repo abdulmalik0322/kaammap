@@ -16,16 +16,16 @@ export default function Home(){
   {/* HERO */}
   <section className="relative"><div className="absolute inset-0 dotgrid opacity-60 pointer-events-none" aria-hidden="true"/>
    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-14 pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-12 items-center">
-   <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:.55,ease:"easeOut"}}>
+   <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:.55,ease:"easeOut"}} className="min-w-0">
     <span className="inline-flex items-center gap-2 bg-white dark:bg-white/10 border border-stone2 px-3.5 py-1.5 rounded-full text-xs font-extrabold tracking-[0.14em] text-forest shadow-soft"><Sparkles size={13}/> {t("hero_badge")}</span>
     <h1 className="font-display font-extrabold text-[38px] sm:text-[54px] xl:text-[60px] leading-[1.05] tracking-tight mt-5">{t("hero_h1a")} <span className="relative inline-block text-forest">{t("hero_h1b")}<svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 9 C30 2, 90 2, 118 8" stroke="#D9F36A" strokeWidth="5" strokeLinecap="round" fill="none"/></svg></span> {t("hero_h1c")}</h1>
     <p className="text-muted mt-5 text-[16px] leading-relaxed max-w-lg">{t("hero_sub")}</p>
-    <div className="mt-7 max-w-xl"><SearchBar big/></div>
+    <div className="mt-7 max-w-xl w-full min-w-0"><SearchBar big/></div>
     <div className="flex flex-wrap items-center gap-2 mt-4"><span className="text-xs font-bold text-muted">{t("hero_try")}</span>{t("try_chips").map(s=><button key={s} onClick={()=>nav("/explore?q="+encodeURIComponent(s))} className="text-[13px] font-semibold bg-white/80 dark:bg-white/10 border border-stone2 px-3 py-1.5 rounded-full hover:border-forest hover:text-forest active:scale-95 transition">{s}</button>)}</div>
     <div className="flex flex-wrap gap-3 mt-8"><Link to="/finder" className="bg-ink dark:bg-lime dark:text-ink text-white px-6 py-3.5 rounded-full font-bold inline-flex items-center gap-2 hover:gap-3 transition-all shadow-soft"><Compass size={17}/> {t("hero_find")}</Link><Link to="/explore" className="px-6 py-3.5 rounded-full font-bold border-2 border-ink/15 hover:border-forest hover:text-forest bg-white/60 dark:bg-transparent">{t("hero_explore")}</Link></div>
     <p className="text-xs text-muted mt-6 flex items-center gap-2"><ShieldCheck size={15} className="text-forest shrink-0"/> {t("hero_indep")}</p>
    </motion.div>
-   <motion.div initial={{opacity:0,scale:.97}} animate={{opacity:1,scale:1}} transition={{duration:.6,delay:.12,ease:"easeOut"}} className="relative max-w-[560px] w-full mx-auto lg:mx-0">
+   <motion.div initial={{opacity:0,scale:.97}} animate={{opacity:1,scale:1}} transition={{duration:.6,delay:.12,ease:"easeOut"}} className="relative max-w-[560px] w-full min-w-0 mx-auto lg:mx-0">
     <Photo eager id={heroImages.main} alt={lang==="ur"?"طلبہ کلاس روم میں اپنی درخواستیں تیار کرتے ہوئے":"Students in a classroom preparing their applications"} className="rounded-[32px] h-[320px] sm:h-[420px] shadow-lift" imgClassName="hover:scale-105 transition duration-700"/>
     <motion.div animate={{y:[0,-7,0]}} transition={{duration:5,repeat:Infinity,ease:"easeInOut"}} className="absolute -bottom-9 left-3 sm:-left-5 bg-white dark:bg-[#20362A] rounded-[22px] shadow-lift border border-stone2 dark:border-white/10 p-5 w-[300px] max-w-[88vw]">
      <div className="flex items-center justify-between"><p className="font-display font-bold text-[13px] flex items-center gap-1.5"><FileCheck2 size={15} className="text-forest"/> {t("hero_card_t")}</p><span className="text-[10px] font-extrabold bg-forest text-white px-2 py-0.5 rounded-full">{t("hero_card_tag")}</span></div>
